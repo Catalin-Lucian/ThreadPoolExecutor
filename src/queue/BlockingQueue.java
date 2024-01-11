@@ -19,7 +19,7 @@ public class BlockingQueue<T> {
             throw new IllegalStateException("Queue is full");
         }
         queue.add(element);
-        notifyAll();
+        notify();
     }
 
     // Inserts the specified element into this queue, waiting if necessary for space to become available.
@@ -28,7 +28,7 @@ public class BlockingQueue<T> {
             wait();
         }
         queue.add(element);
-        notifyAll();
+        notify();
     }
 
     // Inserts the specified element into this queue if it is possible to do so immediately without violating capacity restrictions,
@@ -38,21 +38,27 @@ public class BlockingQueue<T> {
             return false;
         }
         boolean result = queue.offer(element);
-        notifyAll();
+        notify();
         return result;
     }
 
     // Inserts the specified element into this queue,
     // waiting up to the specified wait time if necessary for space to become available.
     public synchronized boolean offer(T element, long timeoutMillis) throws InterruptedException {
-        if (isFull()) {
+        long remainingTime = timeoutMillis;
+        while (isFull() && remainingTime > 0) {
+            long startTime = System.currentTimeMillis();
             wait(timeoutMillis);
-            if (isFull()) {
-                return false;
-            }
+            long endTime = System.currentTimeMillis();
+            remainingTime -= (endTime - startTime);
         }
+
+        if (isEmpty()) {
+            return false;
+        }
+
         boolean result = queue.offer(element);
-        notifyAll();
+        notify();
         return result;
     }
 
@@ -63,21 +69,22 @@ public class BlockingQueue<T> {
             wait();
         }
         T result = queue.poll();
-        notifyAll();
+        notify();
         return result;
     }
 
     // Retrieves and removes the head of this queue,
     // waiting up to the specified wait time if necessary for an element to become available.
     public synchronized T poll(long timeoutMillis) throws InterruptedException {
-        if (isEmpty()) {
+        long remainingTime = timeoutMillis;
+        while (isEmpty() && remainingTime > 0) {
+            long startTime = System.currentTimeMillis();
             wait(timeoutMillis);
-            if (isEmpty()) {
-                return null;
-            }
+            long endTime = System.currentTimeMillis();
+            remainingTime -= (endTime - startTime);
         }
         T result = queue.poll();
-        notifyAll();
+        notify();
         return result;
     }
 
